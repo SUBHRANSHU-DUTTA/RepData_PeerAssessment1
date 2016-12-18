@@ -1,0 +1,106 @@
+---
+output: 
+  html_document: 
+    keep_md: true 
+---
+#Title : 
+##Impacts of Storms and other severe weather events on public health and economic problems for communities and municipalities
+
+#Synopsis :
+##This analysis tries to  explor the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+```{r, echo = TRUE} 
+library(knitr)
+library(markdown)
+library(rmarkdown)
+library(plyr) # for count & aggregate method
+library(stats)
+library(RCurl) # for loading external dataset (getBinaryURL)
+library(R.utils) # for bunzip2
+```
+
+#Data Processing:
+## The data is first unzipped and loaded into a data frame for further analysis and observations
+```{r, echo = TRUE}  
+
+setwd("C://Users//spg//Downloads//documents//data science//data")
+bunzip2("repdata%2Fdata%2FStormData.csv.bz2","repdata%2Fdata%2FStormData.csv")
+
+storm <- read.csv(file = "repdata%2Fdata%2FStormData.csv", header = TRUE, sep = ",")
+dim(storm)
+names(storm)
+str(storm)
+
+ReqNedeed <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
+storm <- storm[ReqNedeed]
+dim(storm)
+names(storm)
+str(storm)
+
+unique(storm$PROPDMGEXP)
+storm$PROPDMGEXP <- mapvalues(storm$PROPDMGEXP, from = c("K", "M","", "B", "m", "+", "0", "5", "6", "?", "4", "2", "3", "h", "7", "H", "-", "1", "8"), to = c(10^3, 10^6, 1, 10^9, 10^6, 0,1,10^5, 10^6, 0, 10^4, 10^2, 10^3, 10^2, 10^7, 10^2, 0, 10, 10^8))
+storm$PROPDMGEXP <- as.numeric(as.character(storm$PROPDMGEXP))
+storm$PROPDMGTOTAL <- (storm$PROPDMG * storm$PROPDMGEXP)/1000000000
+
+unique(storm$CROPDMGEXP)
+storm$CROPDMGEXP <- mapvalues(storm$CROPDMGEXP, from = c("","M", "K", "m", "B", "?", "0", "k","2"), to = c(1,10^6, 10^3, 10^6, 10^9, 0, 1, 10^3, 10^2))
+storm$CROPDMGEXP <- as.numeric(as.character(storm$CROPDMGEXP))
+storm$CROPDMGTOTAL <- (storm$CROPDMG * storm$CROPDMGEXP)/1000000000
+
+sumFatalities <- aggregate(FATALITIES ~ EVTYPE, data = storm,  FUN="sum")
+dim(sumFatalities)  ## 985 observations
+
+fatalities10events <- sumFatalities[order(-sumFatalities$FATALITIES), ][1:10, ]
+dim(fatalities10events)
+fatalities10events
+
+
+sumInjuries <- aggregate(INJURIES ~ EVTYPE, data = storm,  FUN="sum")
+dim(sumInjuries)  ## 985 observations
+
+injuries10events <- sumInjuries[order(-sumInjuries$INJURIES), ][1:10, ]
+dim(injuries10events)
+injuries10events
+
+
+sumPropertyDamage <- aggregate(PROPDMGTOTAL ~ EVTYPE, data = storm,  FUN="sum")
+dim(sumPropertyDamage)  ## 985 observations
+
+propdmg10Total <- sumPropertyDamage[order(-sumPropertyDamage$PROPDMGTOTAL), ][1:10, ]
+propdmg10Total
+
+sumCropDamage <- aggregate(CROPDMGTOTAL ~ EVTYPE, data = storm,  FUN="sum")
+dim(sumCropDamage) ## 985 observations
+
+cropdmg10Total <- sumCropDamage[order(-sumCropDamage$CROPDMGTOTAL), ][1:10, ]
+cropdmg10Total
+```
+
+#Results
+
+##4.1. Injuries vs. Fatalities
+##Juxtaposed the injuries and fatalaties for each major weather event, orderd by number of injuries You can see that the top 5 for both contain the same events. But Heat & Drought has more casulties than Tornado's, by far the #1 in injuries. High seas have almost as much casulties as injuries, so it has the worst odds of survival of the list.
+
+```{r, echo = TRUE}  
+par(mfrow = c(1,1), mar = c(12, 6, 3, 2), mgp = c(4, 1, 0), cex = 0.8)
+barplot(injuries10events$INJURIES, names.arg = injuries10events$EVTYPE, las = 3, main = "10 Injuries Highest Events", ylab = "Number of Injuries")
+dev.copy(png, "injuries-events.png", width = 480, height = 480)
+dev.off()
+
+par(mfrow = c(1,1), mar = c(12, 4, 3, 2), mgp = c(3, 1, 0), cex = 0.8)
+barplot(fatalities10events$FATALITIES, names.arg = fatalities10events$EVTYPE, las = 3, main = "10 Fatalities Highest Events", ylab = "Number of Fatalities")
+dev.copy(png, "fatalities-events.png", width = 480, height = 480)
+dev.off()
+```
+
+#4.2. Economic Damage
+
+##Crop damage is hardly a factor in comparission to the total economic cost of certain weather events, except for Heat & Drought, where it effects more than 90% The real interesting ones are Wind & Storm and Flooding & High Surf covering together more than 80% of all economic damage over all the years. Tornado's,Thunderstorms and Snow & Ice, which have high impact in human costs, hardly matter in economic damages
+
+```{r, echo = TRUE}  
+par(mfrow = c(1,1), mar = c(10, 6, 3, 2), mgp = c(3, 1, 0), cex = 0.6)
+barplot(cropdmg10Total$CROPDMGTOTAL, names.arg = cropdmg10Total$EVTYPE, las = 2, main = "10 Crop Damages Highest Events", ylab = "Damage Crop Values (in Billions) ")
+dev.copy(png, "cropdmg-total.png", width = 480, height = 480)
+dev.off() 
+
+```
