@@ -8,7 +8,7 @@
 
 
 ```r
-    setwd("C://Users//spg//Downloads//documents//data science//data")
+    setwd("C://Working - Subhranshu//Coursera//Course 5//assignments//Wk2 Assignment 1")
     activityData <- read.csv('activity.csv')
 ```
 ## What is mean total number of steps taken per day?
